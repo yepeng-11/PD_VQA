@@ -1,0 +1,10 @@
+[
+  {
+    "knowledge_id": "PD_heterogeneity_review",
+    "statement": "帕金森病具有异质性；跨模态分析需要区分具体观察与疾病层面的推断。此条不能作为某位受试者的诊断依据。",
+    "source_url": "https://doi.org/10.1001/jama.2019.22360",
+    "targets": ["pd_presence", "severity", "evidence_summary"],
+    "keywords": ["帕金森", "综合", "诊断"],
+    "reviewed": false
+  }
+]

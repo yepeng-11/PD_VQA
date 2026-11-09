@@ -1,0 +1,9 @@
+{
+  "subject_id": "P001",
+  "dataset_domain": "parkinson",
+  "records": [
+    {"record_id": "P001_gait_visit1", "modality": "gait", "path": "../data/P001/gait.mp4", "capture_task": "walking", "windows": [{"start": 2.0, "end": 6.0}]},
+    {"record_id": "P001_face_visit1", "modality": "face", "path": "../data/P001/face.mp4", "capture_task": "expression_task", "windows": []},
+    {"record_id": "P001_speech_visit1", "modality": "speech", "path": "../data/P001/speech.wav", "capture_task": "continuous", "windows": []}
+  ]
+}

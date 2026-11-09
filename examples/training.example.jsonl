@@ -1,0 +1,3 @@
+{"subject_id":"P001","record_id":"P001_gait_visit1","modality":"gait","feature_cache":"../data/features/P001_gait.pt","label":"healthy","split":"train"}
+{"subject_id":"P002","record_id":"P002_gait_visit1","modality":"gait","feature_cache":"../data/features/P002_gait.pt","label":"pd","split":"validation"}
+{"subject_id":"P003","record_id":"P003_gait_visit1","modality":"gait","feature_cache":"../data/features/P003_gait.pt","label":"pd","split":"test"}

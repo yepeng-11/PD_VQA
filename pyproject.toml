@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pd-vqa"
+version = "0.1.0"
+description = "Question-driven multimodal agents with traceable evidence and bounded review"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.11"]
+models = ["torch>=2.6", "numpy>=1.26,<3", "transformers>=4.51,<5", "huggingface-hub>=0.34,<1", "Pillow>=10,<13", "opencv-contrib-python>=4.10,<5", "soundfile>=0.12,<1", "librosa>=0.10.2,<0.12", "scipy>=1.11,<2"]
+measurements = ["mediapipe>=0.10.20,<0.11", "webrtcvad-wheels>=2.0.14", "praat-parselmouth>=0.4.6"]
+
+[project.scripts]
+pd-vqa = "pd_vqa.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["pd_vqa*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
