@@ -6,7 +6,7 @@
 
 | 模块 | 解决的问题、实现 | 参考与适配边界 |
 | --- | --- | --- |
-| Orchestrator | 从问题识别目标；只激活请求且存在的模态；报告缺失。支持显式目标覆盖和 DeepSeek JSON 任务识别 | HetMedAgent 的异构专家编排思路；本项目是固定工具注册与类型约束，没有复现其专科生成模型 |
+| Orchestrator | 识别目标与多意图；按数据和模型能力激活专家，生成绑定记录的任务包与分类开关；初次和复核均校验后调度。支持计划预览、显式覆盖和 DeepSeek JSON，详见 [编排说明](orchestrator.md) | HetMedAgent §3.2.2 的三项编排职责；本项目是固定工具注册与类型约束，没有复现其专科生成模型 |
 | Encoder | VideoMAE gait / DINOv2 face / WavLM speech；冻结、串行加载、本地权重、缓存时间序列 | 用户旧 PD_MAgent 已测工具移植；是工程选择，不是宣称最优编码器 |
 | 局部时间与模态内增强 | 输入投影、核3 Conv1D、带位置编码的2头 self-attention、残差与 LayerNorm、mask池化和分类头 | Conv1D 借鉴 DHMD 解耦前处理；自注意力为通用基线，没有移植其解耦或蒸馏 |
 | 运动学/声学测量 | 实际信号与 MediaPipe 关键点计算，保留单位、任务与原始片段；数值确定后组织文本 | BioGait-VLM 的显式测量路线启发；采用自己的2D代理，不复现其 SKEL 估计 |

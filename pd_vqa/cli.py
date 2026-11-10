@@ -5,6 +5,7 @@ import json
 import math
 from pathlib import Path
 import struct
+import sys
 import wave
 
 from .contracts import MODALITIES,TARGETS,Task,Case,Record
@@ -37,24 +38,28 @@ def demo(out):
 
 
 def main(argv=None):
+    if hasattr(sys.stdout,"reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="PD_VQA: question-driven multimodal evidence agents")
     sub = parser.add_subparsers(dest="command",required=True)
     p = sub.add_parser("demo",help="Offline real-signal engineering review loop")
     p.add_argument("--out",required=True)
     p = sub.add_parser("validate",help="Check case/subject bindings and available files")
     p.add_argument("--case",required=True)
-    p = sub.add_parser("run",help="Run independent experts and conflict-aware review")
-    p.add_argument("--case",required=True)
-    p.add_argument("--question",required=True)
-    p.add_argument("--target",choices=TARGETS,help="Omit to identify the task from the question")
-    p.add_argument("--modalities",nargs="+",choices=MODALITIES)
-    p.add_argument("--label-definition",help="Path to clinician's research group definition")
-    p.add_argument("--out",required=True)
-    p.add_argument("--max-reviews",type=int,default=2)
-    p.add_argument("--device",default="cpu")
-    p.add_argument("--online",action="store_true",help="Enable configured DeepSeek JSON calls")
-    p.add_argument("--knowledge",help="Source-linked medical knowledge cards JSON")
-    p.add_argument("--memory",help="Existing frozen skill database")
+    for command in ("run","plan"):
+        p = sub.add_parser(command,help="Execute analysis" if command == "run" else "Preview routing without analysis")
+        p.add_argument("--case",required=True)
+        p.add_argument("--question",required=True)
+        p.add_argument("--target",choices=TARGETS,help="Explicit task override")
+        p.add_argument("--modalities",nargs="+",choices=MODALITIES)
+        p.add_argument("--label-definition",help="Path to clinician's research group definition")
+        p.add_argument("--out",required=True)
+        p.add_argument("--online",action="store_true",help="Enable configured DeepSeek JSON calls")
+        if command == "run":
+            p.add_argument("--max-reviews",type=int,default=2)
+            p.add_argument("--device",default="cpu")
+            p.add_argument("--knowledge",help="Source-linked medical knowledge cards JSON")
+            p.add_argument("--memory",help="Existing frozen skill database")
     p = sub.add_parser("download-models",help="Explicitly download selected frozen encoders")
     p.add_argument("--root",required=True)
     p.add_argument("--modalities",nargs="+",choices=MODALITIES,default=list(MODALITIES))
@@ -105,7 +110,7 @@ def main(argv=None):
                   "cache_available":bool(r.feature_cache and Path(r.feature_cache).is_file()),
                   "checkpoint_available":bool(r.checkpoint and Path(r.checkpoint).is_file())} for r in case.records]
         print(json.dumps({"subject_id":case.subject_id,"records":items},ensure_ascii=False,indent=2))
-    elif args.command == "run":
+    elif args.command in {"run","plan"}:
         from .tools import MediaTools
         from .workflow import Workflow,Orchestrator
         from .memory import SkillMemory
@@ -114,8 +119,19 @@ def main(argv=None):
         case = read_case(args.case)
         api = ChatAPI.from_env() if args.online else None
         inferred = Orchestrator().identify(args.question,[r.modality for r in case.records],api)
-        task = Task(args.question,args.target or inferred.target,args.modalities or inferred.modalities,
-                    Path(args.label_definition).read_text(encoding="utf-8") if args.label_definition else None)
+        target = args.target or inferred.target
+        intents = [i for i in inferred.intents if i != "classification"]
+        if target in {"pd_presence","severity"}:
+            intents.append("classification")
+        task = Task(args.question,target,args.modalities or inferred.modalities,
+                    Path(args.label_definition).read_text(encoding="utf-8") if args.label_definition else None,
+                    intents,"explicit_override" if args.target or args.modalities else inferred.identification_source,
+                    inferred.routing_notes)
+        if args.command == "plan":
+            execution_plan = Orchestrator().build_plan(case,task)
+            save_json(args.out,asdict(execution_plan))
+            print(json.dumps(asdict(execution_plan),ensure_ascii=False))
+            return
         memory = SkillMemory(args.memory,frozen=True) if args.memory else None
         clinical = ClinicalAgent(args.knowledge) if args.knowledge else None
         result = Workflow(MediaTools(workspace=Path(args.out)/"cache",device=args.device),api=api,memory=memory,

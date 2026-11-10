@@ -7,45 +7,10 @@ from copy import deepcopy
 from dataclasses import asdict
 import json
 
-from .contracts import MODALITIES, TARGETS, Task, ExpertReport, Issue, Review, Fusion, Answer, RunResult
+from .contracts import ExpertReport, Issue, Review, Fusion, Answer, RunResult
 
 
-class Orchestrator:
-    def identify(self, question, available, api=None):
-        target,modalities = "evidence_summary",list(available)
-        matches = []
-        for m,words in {"gait":["步态","摆臂","步行","gait"],
-                        "face":["面部","表情","face","facial"],"speech":["语音","声音","speech"]}.items():
-            if any(w in question.lower() for w in words):
-                matches.append(m)
-        if matches:
-            modalities = matches
-        if any(w in question.lower() for w in ("severity","严重程度","分级")):
-            target = "severity"
-        elif any(w in question.lower() for w in ("parkinson","帕金森","诊断","是否患病")):
-            target = "pd_presence"
-        else:
-            if len(matches) == 1:
-                modalities,target = matches,matches[0]+"_observation"
-        if api:
-            try:
-                response = api.complete_json([
-                    {"role":"system","content":"Identify the question task, not the diagnosis. Return JSON "
-                     "{\"target\":\"evidence_summary\",\"modalities\":[\"gait\"]}. Use only allowed enums."},
-                    {"role":"user","content":json.dumps({"question":question,"allowed_targets":TARGETS,
-                     "allowed_modalities":MODALITIES,"available_modalities":available},ensure_ascii=False)}])
-                ms = response.get("modalities")
-                if (response.get("target") in TARGETS and isinstance(ms,list) and ms
-                        and len(set(ms)) == len(ms) and all(m in MODALITIES for m in ms)):
-                    target,modalities = response["target"],list(dict.fromkeys(matches+ms))
-            except (RuntimeError,ValueError,TypeError):
-                pass
-        return Task(question,target,modalities)
-
-    def route(self, case, task):
-        selected = [r for r in case.records if r.modality in task.modalities]
-        available = {r.modality for r in selected}
-        return selected, [m for m in task.modalities if m not in available]
+from .orchestration import Orchestrator
 
 
 class ExpertAgent:
@@ -153,14 +118,17 @@ class CollaborativeReasoner:
     def __init__(self, tools, api=None):
         self.tools,self.api = tools,api
 
-    def plan(self, records, reports, task, review, attempted, skills):
+    def plan(self, records, reports, task, review, attempted, skills, expert_tasks=None):
         implicated = {m for issue in review.issues for m in issue.modalities}
         candidates = []
         for rec in records:
             if rec.modality not in implicated:
                 continue
+            if expert_tasks is not None and rec.modality not in expert_tasks:
+                continue
+            local_task = task if expert_tasks is None else expert_tasks[rec.modality]
             current = next(r for r in reports if r.modality == rec.modality)
-            for action in self.tools.review_options(rec,task,current):
+            for action in self.tools.review_options(rec,local_task,current):
                 fingerprint = (rec.modality,json.dumps(action,sort_keys=True,allow_nan=False))
                 if fingerprint not in attempted:
                     candidates.append({"modality":rec.modality,"action":action})
@@ -251,12 +219,16 @@ class Workflow:
 
     def run(self, case, task):
         records,missing = self.orchestrator.route(case,task)
+        capabilities = ({r.modality:self.tools.capabilities(r,task) for r in records}
+                        if hasattr(self.tools,"capabilities") else None)
+        execution_plan = self.orchestrator.build_plan(case,task,capabilities=capabilities)
+        expert_tasks = {a.modality:a.task for a in execution_plan.assignments if a.status == "ready"}
         skills = []
         if self.memory:
             for rec in records:
                 skills.extend(self.memory.retrieve(rec.modality,"low_quality"))
-        events = [{"agent":"orchestrator","activated":[r.modality for r in records],"missing":missing}]
-        reports = [self.expert.run(r,task) for r in records]
+        events = [self.orchestrator.event(execution_plan)]
+        reports = self.orchestrator.coordinate(case,execution_plan,self.expert,events)
         history,reviews,attempted = [deepcopy(reports)],[],set()
         rounds,stop = 0,"evidence_sufficient"
         knowledge = []
@@ -269,7 +241,7 @@ class Workflow:
             if rounds >= self.max_reviews:
                 stop = "review_budget_exhausted"
                 break
-            plan,status = self.reasoner.plan(records,reports,task,review,attempted,skills)
+            plan,status = self.reasoner.plan(records,reports,task,review,attempted,skills,expert_tasks)
             events.append({"agent":"collaborative_reasoner","plan":plan,"status":status})
             if not plan:
                 stop = status
@@ -277,16 +249,12 @@ class Workflow:
             if self.clinical:
                 knowledge = self.clinical.retrieve(task.question,task.target)
                 events.append({"agent":"clinical_agent","knowledge_ids":[k["knowledge_id"] for k in knowledge]})
-            for item in plan:
-                m,action = item["modality"],item["action"]
-                attempted.add((m,json.dumps(action,sort_keys=True,allow_nan=False)))
-                rec = next(r for r in records if r.modality == m)
-                new = self.expert.run(rec,task,action)
-                reports = [new if r.modality == m else r for r in reports]
+            reports = self.orchestrator.coordinate_review(case,execution_plan,self.expert,plan,
+                                                         reports,review,attempted,events)
             rounds += 1
             history.append(deepcopy(reports))
         fused = self.fusion.fuse(reports)
         answer = self.decision.answer(task,fused,review,missing,case.dataset_domain,knowledge)
         events.append({"agent":"decision","status":answer.status})
-        return RunResult(task,[r.modality for r in records],missing,history,reviews,fused,answer,
-                         rounds,stop,events,skills,knowledge)
+        return RunResult(task,list(expert_tasks),missing,history,reviews,fused,answer,
+                         rounds,stop,events,skills,knowledge,execution_plan)

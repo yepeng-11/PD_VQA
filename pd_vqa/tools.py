@@ -3,6 +3,7 @@ import array
 import hashlib
 import json
 from pathlib import Path
+from pickle import UnpicklingError
 import sys
 import tempfile
 import wave
@@ -49,6 +50,37 @@ def audio_window(path,start=0.,end=None):
 class MediaTools:
     def __init__(self,*,workspace="runs/tool_cache",device="cpu"):
         self.workspace,self.device = Path(workspace),device
+
+    def capabilities(self,record,task):
+        """Read-only availability probe; inference still validates input/checkpoint contracts."""
+        raw = bool(record.path and Path(record.path).is_file())
+        cached = bool(record.feature_cache and Path(record.feature_cache).is_file())
+        encoder = bool(raw and record.model_root and
+                       (Path(record.model_root)/record.modality/"config.json").is_file())
+        operations,targets,limitations = [],[],[]
+        if raw:
+            operations.append("inspect_media")
+            if record.modality == "speech" or (record.landmark_model and Path(record.landmark_model).is_file()):
+                operations.append("measure")
+        if cached:
+            operations.append("read_features")
+        if encoder:
+            operations.append("encode")
+        # Observation-only plans never even load classification weights.
+        if task.target in {"pd_presence","severity"} and (cached or encoder) and record.checkpoint:
+            try:
+                import torch
+                state = torch.load(record.checkpoint,map_location="cpu",weights_only=True)
+                if (isinstance(state,dict) and state.get("trained") is True
+                        and state.get("modality") == record.modality
+                        and state.get("target") in {"pd_presence","severity"}):
+                    operations.append("classify")
+                    targets.append(state["target"])
+                else:
+                    limitations.append("checkpoint_metadata_invalid")
+            except (ImportError,OSError,RuntimeError,ValueError,EOFError,UnpicklingError):
+                limitations.append("checkpoint_unavailable_or_invalid")
+        return {"operations":operations,"classification_targets":targets,"limitations":limitations}
 
     def review_options(self,record,task,current):
         if not record.path or not Path(record.path).is_file():
@@ -194,7 +226,9 @@ class MediaTools:
                     evidence.append(Evidence(prefix+":features",record.subject_id,record.record_id,record.modality,
                         "model_input","encoded_sequence_length",len(x),"tokens",quality,"frozen_encoder:v1",interval,
                         ["Latent features are not directly observed symptoms"]))
-                    if record.checkpoint:
+                    classification_enabled = (task.target in {"pd_presence","severity"} and
+                                              getattr(task,"classification_enabled",True))
+                    if record.checkpoint and classification_enabled:
                         from .models import load_predictor
                         model,labels,digest = load_predictor(record.checkpoint,target=task.target,
                             modality=record.modality,device=self.device,feature_contract=contract,
@@ -205,8 +239,8 @@ class MediaTools:
                         from .models import definition_hash
                         prediction = Prediction(task.target,labels,probs,digest,True,[prefix+":features"],
                             definition_hash(task.label_definition) if task.target == "severity" else None)
-        if not record.checkpoint:
-            limitations.append("No trained checkpoint: no Parkinson/severity prediction is produced")
+        if task.target in {"pd_presence","severity"} and prediction is None:
+            limitations.append("No usable trained checkpoint for the requested target; no disease probability inferred")
         summary = "；".join(f"{e.name}={e.value:.4g} {e.unit}" for e in evidence if isinstance(e.value,(float,int)))
         return ExpertReport(record.subject_id,record.modality,record.record_id,task.target,evidence,
                             prediction,summary,quality,limitations,action)

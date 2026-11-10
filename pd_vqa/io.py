@@ -1,5 +1,5 @@
 """JSON manifests and auditable run artifacts."""
-from dataclasses import fields
+from dataclasses import fields,asdict
 import json
 from pathlib import Path
 
@@ -32,6 +32,8 @@ def save_run(out,result):
     path = out/"result.json"
     with path.open("x",encoding="utf-8") as f:
         json.dump(result.to_dict(),f,ensure_ascii=False,indent=2,allow_nan=False)
+    if result.execution_plan:
+        save_json(out/"plan.json",asdict(result.execution_plan))
     (out/"trace.jsonl").write_text("\n".join(json.dumps(e,ensure_ascii=False,allow_nan=False)
                                 for e in result.events)+"\n",encoding="utf-8")
     (out/"answer.md").write_text(result.answer.text+"\n\n状态："+result.answer.status+

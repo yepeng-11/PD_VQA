@@ -23,7 +23,7 @@ flowchart LR
 
 ## 已实现的功能
 
-- 问题任务识别、显式覆盖和可用模态编排；缺失模态单独报告。
+- 问题任务识别、多意图拆分、按工具能力激活专家，生成绑定受试者/记录的任务包；描述和测量不误启分类流，缺失能力单独报告。
 - 真实音视频质量计算、可选姿态/面部/声学测量、冻结编码器适配。
 - 每模态独立 `Conv1D → Self-Attention + Residual → Masked Pooling → Classifier`。
 - 预测概率、归一化预测熵、测量单位、记录 ID、工具版本和时间窗口一起传递。
@@ -49,6 +49,8 @@ python -m pd_vqa model-smoke --device cuda --out runs/model_smoke_001.json
 ```
 
 demo 创建一段前半部削波、后半部正常的**合成音频**，实际计算质量、选择允许窗口重新计算，并写出 `result.json`、`trace.jsonl`、`answer.md`。再次运行请换输出目录。
+
+执行前可预览编排：`python -m pd_vqa plan --case examples/case.example.json --question '描述步态表现' --out runs/plan_001.json`。正式运行还会保存 `plan.json`，记录各专家的任务、分类开关与阻塞原因。详见 [Orchestrator 设计与用法](docs/orchestrator.md)。
 
 新机器安装最小控制流程：`pip install -e '.[dev]'`。音视频和编码器增加 `pip install -e '.[models]'`；姿态、面部与详细声学计算增加 `pip install -e '.[measurements]'`。后者需要对应 Python 版本的二进制依赖和 MediaPipe task 模型。
 

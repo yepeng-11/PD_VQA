@@ -5,6 +5,8 @@ import math
 MODALITIES = ("gait", "face", "speech")
 TARGETS = ("pd_presence", "severity", "gait_observation", "face_observation",
            "speech_observation", "evidence_summary")
+INTENTS = ("observation", "measurement", "classification", "explanation")
+OPERATIONS = ("inspect_media", "measure", "encode", "read_features", "classify", "analyze")
 
 
 def bounded(value, low=0., high=1.):
@@ -61,12 +63,59 @@ class Task:
     target: str
     modalities: list[str]
     label_definition: str | None = None
+    intents: list[str] = field(default_factory=list)
+    identification_source: str = "explicit"
+    routing_notes: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.question.strip() or not self.target or not self.modalities:
             raise ValueError("Question, target and requested modalities are required")
         if len(set(self.modalities)) != len(self.modalities) or any(m not in MODALITIES for m in self.modalities):
             raise ValueError("Invalid requested modalities")
+        if any(i not in INTENTS for i in self.intents) or len(set(self.intents)) != len(self.intents):
+            raise ValueError("Invalid task intents")
+
+
+@dataclass
+class ExpertTask(Task):
+    task_id: str = ""
+    subject_id: str = ""
+    record_id: str = ""
+    modality: str = ""
+    classification_requested: bool = False
+    classification_enabled: bool = False
+    allowed_operations: list[str] = field(default_factory=list)
+    instructions: list[str] = field(default_factory=list)
+    output_requirements: list[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        super().__post_init__()
+        if not self.task_id or not self.subject_id or not self.record_id or self.modalities != [self.modality]:
+            raise ValueError("Expert task must be bound to one subject, record and modality")
+        if any(op not in OPERATIONS for op in self.allowed_operations):
+            raise ValueError("Unknown expert operation")
+        if self.classification_enabled and (not self.classification_requested or "classify" not in self.allowed_operations):
+            raise ValueError("Classifier activation requires a classification request and registered capability")
+
+
+@dataclass
+class ExpertAssignment:
+    agent_name: str
+    modality: str
+    status: str
+    task: ExpertTask | None
+    blocked_requirements: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ExecutionPlan:
+    subject_id: str
+    task: Task
+    assignments: list[ExpertAssignment]
+    missing_modalities: list[str]
+    execution_mode: str = "serial_shared_device"
+    stages: list[str] = field(default_factory=lambda: [
+        "task_identification", "agent_activation", "execution_coordination"])
 
 
 @dataclass
@@ -203,6 +252,7 @@ class RunResult:
     events: list[dict]
     retrieved_skills: list[dict] = field(default_factory=list)
     knowledge: list[dict] = field(default_factory=list)
+    execution_plan: ExecutionPlan | None = None
 
     def to_dict(self):
         return asdict(self)

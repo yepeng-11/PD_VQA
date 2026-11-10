@@ -42,6 +42,11 @@ class RecordingTool:
         self.outputs, self.actions = outputs, actions or {}
         self.calls = []
 
+    def capabilities(self,rec,task):
+        targets = list(dict.fromkeys(r.prediction.target for r in self.outputs.get(rec.modality,[])
+                                     if r.prediction and r.prediction.trained))
+        return {"operations":["analyze"]+(["classify"] if targets else []),"classification_targets":targets}
+
     def analyze(self, rec, task, action=None):
         self.calls.append((rec.modality, action))
         values = self.outputs[rec.modality]
