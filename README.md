@@ -25,6 +25,7 @@ flowchart LR
 
 - 问题任务识别、多意图拆分、按工具能力激活专家，生成绑定受试者/记录的任务包；描述和测量不误启分类流，缺失能力单独报告。
 - 真实音视频质量计算、可选姿态/面部/声学测量、冻结编码器适配。
+- 三个独立 Qwen 多模态 Expert：原始视频/录音与实际测量共同输入；模型解读、工具测量、分类概率分别保存，支持同一记录的定向片段复核。
 - 每模态独立 `Conv1D → Self-Attention + Residual → Masked Pooling → Classifier`。
 - 预测概率、归一化预测熵、测量单位、记录 ID、工具版本和时间窗口一起传递。
 - 先检查预测目标与类别定义，再比较专家；不同症状不是冲突。
@@ -99,6 +100,8 @@ python -m pd_vqa run --case data/P001.json --question '这些数据支持什么�
 ```
 
 API 只接收工具结构化结果，不上传原始文件、训练标签或文件路径。当前版本约束 API 选择已有证据 ID，最终类别、数值和单位由程序渲染；API 自由生成的医学断言不会直接替换答案。Clinical Agent 通过 `--knowledge` 读取有来源、任务范围的 JSON 知识卡；示例卡是未审核候选，不是正式临床知识库。
+
+以上是 DeepSeek 控制流程的输入规则。新增 **Qwen Expert** 通过 `--expert-backend qwen` 显式启用，会上传所分配记录的原始音视频和测量文本，并返回标明未核验的模型解读；默认离线行为保持不变。三个专家的工具、配置、限制及使用方法见 [Expert 文档](docs/experts.md)；三模态清单见 [Qwen 案例模板](examples/case.qwen.example.json)。
 
 ## 反思与技能进化
 

@@ -1,0 +1,29 @@
+{
+  "subject_id": "P001",
+  "dataset_domain": "parkinson",
+  "records": [
+    {
+      "record_id": "P001_gait_visit1",
+      "modality": "gait",
+      "path": "../data/P001/gait.mp4",
+      "capture_task": "walking",
+      "landmark_model": "../models/measurement_tools/pose_landmarker_lite.task",
+      "windows": []
+    },
+    {
+      "record_id": "P001_face_visit1",
+      "modality": "face",
+      "path": "../data/P001/face.mp4",
+      "capture_task": "facial_expression",
+      "landmark_model": "../models/measurement_tools/face_landmarker.task",
+      "windows": []
+    },
+    {
+      "record_id": "P001_speech_visit1",
+      "modality": "speech",
+      "path": "../data/P001/speech.wav",
+      "capture_task": "continuous",
+      "windows": []
+    }
+  ]
+}

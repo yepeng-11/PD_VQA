@@ -55,6 +55,8 @@ def main(argv=None):
         p.add_argument("--label-definition",help="Path to clinician's research group definition")
         p.add_argument("--out",required=True)
         p.add_argument("--online",action="store_true",help="Enable configured DeepSeek JSON calls")
+        p.add_argument("--expert-backend",choices=["local","qwen"],default="local",
+                       help="qwen uploads selected source media for multimodal expert interpretation")
         if command == "run":
             p.add_argument("--max-reviews",type=int,default=2)
             p.add_argument("--device",default="cpu")
@@ -127,14 +129,20 @@ def main(argv=None):
                     Path(args.label_definition).read_text(encoding="utf-8") if args.label_definition else None,
                     intents,"explicit_override" if args.target or args.modalities else inferred.identification_source,
                     inferred.routing_notes)
+        tools = MediaTools(workspace=Path(args.out)/"cache",device=getattr(args,"device","cpu"))
+        if args.expert_backend == "qwen":
+            from .qwen import QwenAPI
+            from .experts import MultimodalExpertTools
+            tools = MultimodalExpertTools(tools,QwenAPI.from_env())
         if args.command == "plan":
-            execution_plan = Orchestrator().build_plan(case,task)
+            execution_plan = Orchestrator().build_plan(case,task,capabilities={
+                r.modality:tools.capabilities(r,task) for r in case.records if r.modality in task.modalities})
             save_json(args.out,asdict(execution_plan))
             print(json.dumps(asdict(execution_plan),ensure_ascii=False))
             return
         memory = SkillMemory(args.memory,frozen=True) if args.memory else None
         clinical = ClinicalAgent(args.knowledge) if args.knowledge else None
-        result = Workflow(MediaTools(workspace=Path(args.out)/"cache",device=args.device),api=api,memory=memory,
+        result = Workflow(tools,api=api,memory=memory,
                           clinical=clinical,max_reviews=args.max_reviews).run(case,task)
         save_run(args.out,result)
         print(json.dumps(asdict(result.answer),ensure_ascii=False))

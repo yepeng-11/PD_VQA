@@ -10,7 +10,7 @@
 | Encoder | VideoMAE gait / DINOv2 face / WavLM speech；冻结、串行加载、本地权重、缓存时间序列 | 用户旧 PD_MAgent 已测工具移植；是工程选择，不是宣称最优编码器 |
 | 局部时间与模态内增强 | 输入投影、核3 Conv1D、带位置编码的2头 self-attention、残差与 LayerNorm、mask池化和分类头 | Conv1D 借鉴 DHMD 解耦前处理；自注意力为通用基线，没有移植其解耦或蒸馏 |
 | 运动学/声学测量 | 实际信号与 MediaPipe 关键点计算，保留单位、任务与原始片段；数值确定后组织文本 | BioGait-VLM 的显式测量路线启发；采用自己的2D代理，不复现其 SKEL 估计 |
-| Expert | 工具输出成为结构化报告：目标、概率、预测熵、质量、观测、证据ID、局限 | HetMedAgent 异构输出思路；这里预测熵来自分类 softmax，不是生成token概率，不声称校准 |
+| Expert | 三种独立工具链；可选 Qwen 接收原始音视频与测量，生成绑定证据和原始时间的未核验解读；报告保留独立分类概率、质量与局限，见 [工具设计](experts.md) | MedAgent-Pro §3.3 工具与证据检查、BioGait-VLM 显式测量、HetMedAgent 异构输出思路；API 服务端编码，不上传任意 Token 向量；分类预测熵未校准 |
 | Evidence Critic | subject/record/target/证据引用校验；质量不足；仅比较同目标且同类别定义的预测；不同定义报告不可比较 | MedAgent-Pro 每步证据检查 + HetMedAgent 同类证据对照思想；当前冲突判定是可审计规则，尚未训练细粒度冲突模型 |
 | Collaborative Reasoner | 在工具实际可用的候选窗口中选择动作；相同动作不重复；可用 LLM 规划但不可发明工具参数 | HealthFlow 的定向修复思路；“跨模态冲突后重提特征”的有效性仍需实验 |
 | Clinical Agent | 根据目标检索本地有原文来源的知识卡；知识不冒充患者观测 | MedAgent-Pro RAG 规划启发；当前为小规模本地检索，不是完整 PubMed RAG 服务 |

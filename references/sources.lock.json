@@ -5,7 +5,10 @@
       "name": "MedAgent-Pro",
       "repository": "https://github.com/jinlab-imvr/MedAgent-Pro",
       "commit": "cea2721795bf748516b98fb959f581b502b1d186",
-      "inspected_files": ["Case_level.py", "Examiner.py"],
+      "inspected_files": [
+        "Case_level.py",
+        "Examiner.py"
+      ],
       "license_reported_by_github": null,
       "integration": "Read for evidence evaluation and tool I/O design; no upstream source vendored. Current Case_level.py inspected did not wire Examiner into its execution loop. Paper and public demo must be distinguished."
     },
@@ -13,7 +16,10 @@
       "name": "HealthFlow",
       "repository": "https://github.com/yhzhu99/HealthFlow",
       "commit": "43d3adb476adf7c3a65027321e8be1ed96958682",
-      "inspected_files": ["healthflow/agents/evaluator_agent.py", "healthflow/agents/reflector_agent.py"],
+      "inspected_files": [
+        "healthflow/agents/evaluator_agent.py",
+        "healthflow/agents/reflector_agent.py"
+      ],
       "license_reported_by_github": null,
       "integration": "Read for typed verdicts, bounded repair, trajectory synthesis and scoped memory. Independently adapted to recording evidence; no upstream source vendored."
     },
@@ -25,11 +31,63 @@
     }
   ],
   "papers": [
-    {"name": "MedAgent-Pro", "url": "https://openreview.net/forum?id=ZOuU0udyA4", "status": "ICLR 2026", "use": "Evidence checking"},
-    {"name": "HealthFlow", "url": "https://www.nature.com/articles/s41746-026-03097-0", "status": "npj Digital Medicine 2026", "use": "Current-task repair vs cross-task memory"},
-    {"name": "SkeMex / Experience Makes Skillful", "url": "https://arxiv.org/html/2606.09365v1", "status": "2026 arXiv version inspected; no conference status assumed", "use": "Structured skill memory; simplified here, not a full reproduction"},
-    {"name": "HetMedAgent / Why Specialist Models Still Matter", "url": "https://proceedings.mlr.press/v306/wang26cb.html", "status": "ICML 2026", "use": "Specialist evidence, comparability and weighted evidence context; different confidence and weighting implementation here"},
-    {"name": "DHMD", "url": "https://arxiv.org/html/2602.04260v1", "status": "arXiv version inspected", "use": "Conv1D temporal projection idea only; no disentangling/distillation reproduced"},
-    {"name": "BioGait-VLM", "url": "https://arxiv.org/html/2603.08564", "status": "arXiv version inspected", "use": "Separate learned visual evidence and explicit biomechanics; own 2D measurement tools instead of SKEL reproduction"}
+    {
+      "name": "MedAgent-Pro",
+      "url": "https://openreview.net/forum?id=ZOuU0udyA4",
+      "status": "ICLR 2026",
+      "use": "Evidence checking"
+    },
+    {
+      "name": "HealthFlow",
+      "url": "https://www.nature.com/articles/s41746-026-03097-0",
+      "status": "npj Digital Medicine 2026",
+      "use": "Current-task repair vs cross-task memory"
+    },
+    {
+      "name": "SkeMex / Experience Makes Skillful",
+      "url": "https://arxiv.org/html/2606.09365v1",
+      "status": "2026 arXiv version inspected; no conference status assumed",
+      "use": "Structured skill memory; simplified here, not a full reproduction"
+    },
+    {
+      "name": "HetMedAgent / Why Specialist Models Still Matter",
+      "url": "https://proceedings.mlr.press/v306/wang26cb.html",
+      "status": "ICML 2026",
+      "use": "Specialist evidence, comparability and weighted evidence context; different confidence and weighting implementation here"
+    },
+    {
+      "name": "DHMD",
+      "url": "https://arxiv.org/html/2602.04260v1",
+      "status": "arXiv version inspected",
+      "use": "Conv1D temporal projection idea only; no disentangling/distillation reproduced"
+    },
+    {
+      "name": "BioGait-VLM",
+      "url": "https://arxiv.org/html/2603.08564",
+      "status": "arXiv version inspected",
+      "use": "Separate learned visual evidence and explicit biomechanics; own 2D measurement tools instead of SKEL reproduction"
+    }
+  ],
+  "api_integrations": [
+    {
+      "name": "Qwen3.8-Omni-Flash",
+      "model_id": "qwen3.8-omni-flash",
+      "documentation": "https://help.aliyun.com/zh/model-studio/qwen-omni",
+      "verified_on": "2026-11-10",
+      "integration": "Chat Completions SSE; raw audio/video and source-linked tool measurements; unverified interpretations; no custom embedding token upload",
+      "credential_storage": "server-only ignored environment file; no credential in repository"
+    }
+  ],
+  "measurement_assets": [
+    {
+      "name": "MediaPipe Pose Landmarker Lite",
+      "source": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task",
+      "sha256": "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a"
+    },
+    {
+      "name": "MediaPipe Face Landmarker",
+      "source": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+      "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+    }
   ]
 }

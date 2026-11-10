@@ -51,6 +51,12 @@ class EvidenceCritic:
                     raise ValueError("Evidence subject/record mismatch")
                 e.__post_init__()
             r.__post_init__()
+            if r.semantic_status in {"failed","unavailable","insufficient"}:
+                issues.append(Issue("insufficient",[r.modality],"Requested multimodal analysis unavailable or uncertain",list(ids)))
+            for finding in r.findings:
+                finding.__post_init__()
+                if not set(finding.evidence_ids)<=ids:
+                    raise ValueError("Model interpretation references missing evidence")
             if r.prediction:
                 r.prediction.__post_init__()
                 if (r.prediction.target != r.target or not r.prediction.evidence_ids
@@ -197,8 +203,13 @@ class DecisionAgent:
                 pass
         # Authoritative conclusions and values are rendered from typed evidence, never API prose.
         facts = [f"{e.name}={e.value} {e.unit} [{e.evidence_id}]"
-                 for r in fusion.reports for e in r.evidence if e.evidence_id in selected_ids]
+                 for r in fusion.reports for e in r.evidence
+                 if e.evidence_id in selected_ids and e.kind not in {"media_input","model_input"}]
         text = (f"研究模型候选类别：{candidate}。" if candidate else "可核查的观测：")+"；".join(facts)
+        interpretations=[f"{f.text} [{', '.join(f.evidence_ids)}]" for r in fusion.reports for f in r.findings
+                         if r.semantic_status=="complete" and set(f.evidence_ids)<=set(selected_ids)]
+        if interpretations:
+            text += "。模型解读（待核验）："+"；".join(interpretations)
         limitations = list(dict.fromkeys(s for r in fusion.reports for s in r.limitations))
         if limitations:
             text += "。局限："+"；".join(limitations)

@@ -180,6 +180,32 @@ class Prediction:
 
 
 @dataclass
+class ExpertFinding:
+    finding_id: str
+    text: str
+    status: str
+    evidence_ids: list[str]
+    interval: list[float] | None = None
+    method: str = "model_interpretation_unverified"
+
+    def __post_init__(self):
+        if (not self.finding_id or not isinstance(self.text,str) or not self.text.strip()
+                or len(self.text)>2000 or self.status not in {"observed","uncertain","not_assessable"}
+                or not isinstance(self.evidence_ids,list)
+                or (self.status=="observed" and not self.evidence_ids)
+                or not all(isinstance(i,str) for i in self.evidence_ids)
+                or self.method != "model_interpretation_unverified"):
+            raise ValueError("Invalid model interpretation")
+        if self.interval is not None:
+            if not isinstance(self.interval,list) or len(self.interval)!=2:
+                raise ValueError("Invalid finding interval")
+            bounded(self.interval[0],0,86400)
+            bounded(self.interval[1],0,86400)
+            if self.interval[1]<=self.interval[0]:
+                raise ValueError("Invalid finding interval")
+
+
+@dataclass
 class ExpertReport:
     subject_id: str
     modality: str
@@ -192,9 +218,15 @@ class ExpertReport:
     limitations: list[str] = field(default_factory=list)
     action: dict | None = None
     tool_error: str | None = None
+    findings: list[ExpertFinding] = field(default_factory=list)
+    semantic_status: str = "not_requested"
+    semantic_model: str | None = None
+    semantic_error: str | None = None
 
     def __post_init__(self):
         bounded(self.quality)
+        if self.semantic_status not in {"not_requested","complete","insufficient","failed","unavailable"}:
+            raise ValueError("Invalid semantic analysis status")
 
     def api_payload(self):
         # Do not include file paths, training labels, or arbitrary manifest fields.
@@ -203,7 +235,9 @@ class ExpertReport:
                 "prediction": asdict(self.prediction) if self.prediction else None,
                 "predictive_uncertainty": self.prediction.uncertainty if self.prediction else None,
                 "confidence_method": "uncalibrated_softmax" if self.prediction else None,
-                "summary": self.summary, "quality": self.quality, "limitations": self.limitations}
+                "summary": self.summary, "quality": self.quality, "limitations": self.limitations,
+                "findings":[asdict(f) for f in self.findings],"semantic_status":self.semantic_status,
+                "semantic_model":self.semantic_model,"semantic_error":self.semantic_error}
 
 
 @dataclass
