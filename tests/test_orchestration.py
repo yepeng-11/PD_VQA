@@ -28,6 +28,10 @@ from pd_vqa.workflow import Orchestrator,Workflow
     ("Can you describe the gait of this Parkinson patient?","gait_observation",["gait"]),
     ("Could you measure speech pauses in this Parkinson patient?","speech_observation",["speech"]),
     ("Does this Parkinson patient have reduced arm swing?","gait_observation",["gait"]),
+    ("请描述语音，引用测量。不要推断疾病、严重程度或输出分类概率。","speech_observation",["speech"]),
+    ("不要只描述语音，请进行帕金森分类。","pd_presence",["speech"]),
+    ("不要只描述语音而要进行帕金森分类。","pd_presence",["speech"]),
+    ("不需要报告全部声学参数但请进行帕金森分类。","pd_presence",["speech"]),
 ])
 def test_recognition_separates_disease_context_from_requested_classification(question,target,modalities):
     task=Orchestrator().identify(question,["gait","face","speech"])

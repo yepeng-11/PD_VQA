@@ -25,11 +25,13 @@ FOCUS = {
 
 def _classification_request(question):
     q = question.casefold()
-    if re.search(r"(?:不要|不需要|无需|不用|不做|不进行).{0,8}(?:分类|诊断|分级)|"
+    # Contrast clauses end negation even without an explicit comma.
+    negative_context = re.sub(r"而要|而应|而是|但是请|但请|但要|但需要", "，", q)
+    if re.search(r"(?:不要|不需要|无需|不用|不做|不进行)[^，,。.!！？?;；\n]{0,80}(?:分类|诊断|分级)|"
                  r"\b(?:do not|don't|no|without)\b(?:\s+[\w'-]+){0,4}\s+"
                  r"(?:classif\w*|diagnos\w*)|"
                  r"\b(?:do not|don't)\s+(?:predict|detect|estimate|assess)\s+"
-                 r"(?:parkinson|pd\b|severity)", q):
+                 r"(?:parkinson|pd\b|severity)", negative_context):
         return False
     return bool(re.search(
         r"分类|诊断|患病|分组|分级|等级|评定|属于.{0,8}(类别|疾病|类型)|"
