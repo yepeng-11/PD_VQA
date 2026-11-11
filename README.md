@@ -121,3 +121,5 @@ python -m pd_vqa run --case data/P001.json --question '分析步态证据' \
 模块动机、来源与代码对应见 [架构设计](docs/architecture.md)；已核对的官方代码版本见 [来源锁定](references/sources.lock.json)。
 
 当前框架的工程验证、已修复问题和未通过的语义支持负例见 [2026-11-11 验证报告](docs/validation_framework_2026-11-11.md)。功能场景包含合成媒体与受控响应，不代表医学问答准确率。
+
+真实KTH步态、YouTubePD与RAVDESS面部视频的下载、测量、API测试及失败记录见 [真人视频验证报告](docs/validation_real_vision_2026-11-11.md)。
