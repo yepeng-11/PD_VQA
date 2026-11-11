@@ -103,6 +103,30 @@ def test_diagnostic_request_does_not_hide_a_missing_specialist_prediction():
     assert answer.status == "insufficient_evidence"
 
 
+@pytest.mark.parametrize("scenario", ["missing_classifier", "missing_modality", "empty_case"])
+def test_decision_abstention_does_not_record_evidence_sufficient_stop(scenario):
+    from test_workflow import RecordingTool, record, report
+    from pd_vqa.contracts import Case, Task
+    from pd_vqa.workflow import Workflow
+    observation = report("gait", target="gait_observation")
+    observation.prediction = None
+    tools = RecordingTool({"gait": [observation]})
+    records = [record()]
+    target, modalities = "gait_observation", ["gait"]
+    if scenario == "missing_classifier":
+        target = "pd_presence"
+        observation.target = target
+    elif scenario == "missing_modality":
+        modalities.append("speech")
+    else:
+        records = []
+    result = Workflow(tools, max_reviews=0).run(Case("P1", records), Task("检查证据", target, modalities))
+    assert result.answer.status == "insufficient_evidence"
+    assert result.stop_reason == "decision_insufficient_evidence"
+    assert result.review_rounds == 0
+    assert result.events[-1]["stop_reason"] == result.stop_reason
+
+
 def test_cache_cannot_inherit_quality_from_a_different_raw_file(tmp_path):
     import torch
     from test_tools_models import wav

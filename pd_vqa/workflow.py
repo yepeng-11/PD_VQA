@@ -266,6 +266,10 @@ class Workflow:
             history.append(deepcopy(reports))
         fused = self.fusion.fuse(reports)
         answer = self.decision.answer(task,fused,review,missing,case.dataset_domain,knowledge)
-        events.append({"agent":"decision","status":answer.status})
+        # A critic pass does not guarantee all task requirements are satisfied.
+        # Preserve explicit budget/action exhaustion reasons when already set.
+        if stop == "evidence_sufficient" and answer.status != "answered":
+            stop = "decision_"+answer.status
+        events.append({"agent":"decision","status":answer.status,"stop_reason":stop})
         return RunResult(task,list(expert_tasks),missing,history,reviews,fused,answer,
                          rounds,stop,events,skills,knowledge,execution_plan)

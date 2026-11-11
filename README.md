@@ -119,3 +119,5 @@ python -m pd_vqa run --case data/P001.json --question '分析步态证据' \
 质量改善与诊断正确分开评价；专家一致不充当外部反馈。当前技能提炼采用确定性可执行动作记录，DeepSeek 规划可读取已验证技能。效用采用简化成功/失败统计，尚未实现 SkeMex 的窗口式优势估计、三分支语义检索和完整技能治理。
 
 模块动机、来源与代码对应见 [架构设计](docs/architecture.md)；已核对的官方代码版本见 [来源锁定](references/sources.lock.json)。
+
+当前框架的工程验证、已修复问题和未通过的语义支持负例见 [2026-11-11 验证报告](docs/validation_framework_2026-11-11.md)。功能场景包含合成媒体与受控响应，不代表医学问答准确率。
